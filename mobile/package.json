@@ -1,0 +1,29 @@
+{
+  "name": "mobile",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "@react-navigation/native": "^7.3.17",
+    "@react-navigation/native-stack": "^7.18.9",
+    "@reactvision/react-viro": "^2.58.1",
+    "axios": "^1.19.0",
+    "expo": "~57.0.14",
+    "expo-dev-client": "~57.0.13",
+    "expo-image-picker": "~57.0.11",
+    "expo-location": "~57.0.11",
+    "expo-secure-store": "~57.0.1",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-view-shot": "5.1.0"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web"
+  },
+  "private": true
+}
