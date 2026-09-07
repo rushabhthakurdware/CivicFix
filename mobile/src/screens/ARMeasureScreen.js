@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { captureRef } from "react-native-view-shot";
 import {
   ViroARScene,
   ViroARSceneNavigator,
@@ -43,7 +42,16 @@ function distance(p1, p2) {
 
 const MeasureScene = ({ sceneNavigator }) => {
   const [points, setPoints] = useState([]);
-  const [planeFound, setPlaneFound] = useState(false);
+
+  // Register our screenshot capability with the outer screen component.
+  // takeScreenshot must be called via sceneNavigator (available inside the
+  // scene), not the outer ViroARSceneNavigator ref - that's what caused the
+  // earlier "undefined is not a function" error.
+  React.useEffect(() => {
+    sceneNavigator.viroAppProps.registerScreenshotFn(() =>
+      sceneNavigator.takeScreenshot(`ar_measurement_${Date.now()}`, false)
+    );
+  }, []);
 
   const handlePlaneClick = (position) => {
     console.log("Tap registered at:", position, "Total points:", points.length + 1);
@@ -113,7 +121,7 @@ export default function ARMeasureScreen({ navigation, route }) {
   const [planeFound, setPlaneFound] = useState(false);
   const [sceneKey, setSceneKey] = useState(0);
   const navigatorRef = useRef(null);
-  const captureViewRef = useRef(null);
+  const screenshotFnRef = useRef(null);
 
   const handleReset = () => {
     setPoints([]);
@@ -148,13 +156,13 @@ export default function ARMeasureScreen({ navigation, route }) {
 
     let screenshotUri = null;
     try {
-      // Captures whatever is currently rendered on screen (AR camera feed +
-      // dots/line overlay), using a general screenshot library rather than
-      // Viro's own takeScreenshot, which has a known open bug on Android.
-      screenshotUri = await captureRef(captureViewRef, {
-        format: "jpg",
-        quality: 0.8,
-      });
+      // Calls the function MeasureScene registered - this reaches Viro's
+      // real GL frame buffer directly, avoiding the SurfaceView-is-black
+      // problem that a generic screenshot tool (view-shot) can't get past.
+      const screenshot = await screenshotFnRef.current?.();
+      if (screenshot?.success) {
+        screenshotUri = screenshot.url;
+      }
     } catch (err) {
       console.log("AR screenshot failed (non-fatal):", err.message);
     }
@@ -173,7 +181,7 @@ export default function ARMeasureScreen({ navigation, route }) {
   };
 
   return (
-    <View style={{ flex: 1 }} ref={captureViewRef} collapsable={false}>
+    <View style={{ flex: 1 }}>
       <ViroARSceneNavigator
         key={sceneKey}
         ref={navigatorRef}
@@ -182,6 +190,9 @@ export default function ARMeasureScreen({ navigation, route }) {
         viroAppProps={{
           onPointsChange: setPoints,
           onPlaneFound: () => setPlaneFound(true),
+          registerScreenshotFn: (fn) => {
+            screenshotFnRef.current = fn;
+          },
         }}
         style={{ flex: 1 }}
       />

@@ -26,6 +26,19 @@ router.get(
     complaintController.getMyComplaints
 );
 
+router.get(
+    "/officer/all",
+    authMiddleware,
+    authorizeRoles("OFFICER", "ADMIN"),
+    complaintController.getAllComplaintsForOfficer
+);
+
+router.get(
+    "/officer/:complaintId",
+    authMiddleware,
+    authorizeRoles("OFFICER", "ADMIN"),
+    complaintController.getComplaintDetailsForOfficer
+);
 
 router.get(
     "/:complaintId",
@@ -45,6 +58,7 @@ router.get(
     authMiddleware,
     statusHistoryController.getComplaintStatusHistory
 );
+
 
 
 

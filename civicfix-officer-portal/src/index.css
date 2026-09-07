@@ -1,0 +1,24 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* Leaflet dark theme overrides */
+.leaflet-popup-content-wrapper {
+  background: #111111 !important;
+  border: 1px solid #262626 !important;
+  border-radius: 14px !important;
+  color: #ededed !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7) !important;
+}
+
+.leaflet-popup-tip {
+  background: #111111 !important;
+  border-top: 1px solid #262626 !important;
+}
+
+.leaflet-container {
+  font-family: inherit;
+}
+/* Invert and tone down OpenStreetMap tiles to match dark mode */
+.dark-tiles {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}

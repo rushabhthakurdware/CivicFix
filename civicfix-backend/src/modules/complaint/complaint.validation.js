@@ -4,32 +4,44 @@ const validateCreateComplaint = (complaintData) => {
         title,
         description,
         category,
-        severity,
+        // severity,
         latitude,
-        longitude
+        longitude,
+        estimated_area_sqm,
+        estimated_length_m,
+        estimated_width_m,
+        measured_via_ar
     } = complaintData;
 
-
+    // =========================
     // Required fields
+    // =========================
     if (
         !title ||
         !description ||
         !category ||
-        !severity ||
+        // !severity ||
         latitude === undefined ||
-        longitude === undefined
+        latitude === null ||
+        longitude === undefined ||
+        longitude === null
     ) {
         throw new Error("All required fields must be provided.");
     }
 
-
+    // =========================
     // Title validation
-    if (typeof title !== "string" || title.trim().length < 5) {
+    // =========================
+    if (
+        typeof title !== "string" ||
+        title.trim().length < 5
+    ) {
         throw new Error("Title must be at least 5 characters.");
     }
 
-
+    // =========================
     // Description validation
+    // =========================
     if (
         typeof description !== "string" ||
         description.trim().length < 10
@@ -39,8 +51,9 @@ const validateCreateComplaint = (complaintData) => {
         );
     }
 
-
+    // =========================
     // Category validation
+    // =========================
     const validCategories = [
         "POTHOLE",
         "SEWAGE",
@@ -54,27 +67,21 @@ const validateCreateComplaint = (complaintData) => {
         throw new Error("Invalid complaint category.");
     }
 
-
+    // =========================
     // Severity validation
-    const validSeverities = [
-        "LOW",
-        "MEDIUM",
-        "HIGH"
-    ];
-
-    if (!validSeverities.includes(severity)) {
-        throw new Error("Invalid severity level.");
-    }
-
-
-    // Convert location values to numbers
+    // =========================
+    
+    // =========================
+    // Convert location values
+    // =========================
     const latitudeNumber = Number(latitude);
     const longitudeNumber = Number(longitude);
 
-
-    // Check if latitude is a valid number
+    // =========================
+    // Latitude validation
+    // =========================
     if (
-        Number.isNaN(latitudeNumber) ||
+        !Number.isFinite(latitudeNumber) ||
         latitudeNumber < -90 ||
         latitudeNumber > 90
     ) {
@@ -83,10 +90,11 @@ const validateCreateComplaint = (complaintData) => {
         );
     }
 
-
-    // Check if longitude is a valid number
+    // =========================
+    // Longitude validation
+    // =========================
     if (
-        Number.isNaN(longitudeNumber) ||
+        !Number.isFinite(longitudeNumber) ||
         longitudeNumber < -180 ||
         longitudeNumber > 180
     ) {
@@ -95,10 +103,106 @@ const validateCreateComplaint = (complaintData) => {
         );
     }
 
+    // =========================
+    // Estimated Area
+    // =========================
+    let area = null;
 
-    return true;
+    if (
+        estimated_area_sqm !== undefined &&
+        estimated_area_sqm !== null &&
+        estimated_area_sqm !== ""
+    ) {
+        area = Number(estimated_area_sqm);
+
+        if (
+            !Number.isFinite(area) ||
+            area < 0
+        ) {
+            throw new Error("Invalid estimated area.");
+        }
+    }
+
+    // =========================
+    // Estimated Length
+    // =========================
+    let length = null;
+
+    if (
+        estimated_length_m !== undefined &&
+        estimated_length_m !== null &&
+        estimated_length_m !== ""
+    ) {
+        length = Number(estimated_length_m);
+
+        if (
+            !Number.isFinite(length) ||
+            length < 0
+        ) {
+            throw new Error("Invalid estimated length.");
+        }
+    }
+
+    // =========================
+    // Estimated Width
+    // =========================
+    let width = null;
+
+    if (
+        estimated_width_m !== undefined &&
+        estimated_width_m !== null &&
+        estimated_width_m !== ""
+    ) {
+        width = Number(estimated_width_m);
+
+        if (
+            !Number.isFinite(width) ||
+            width < 0
+        ) {
+            throw new Error("Invalid estimated width.");
+        }
+    }
+
+    // =========================
+    // AR Measurement Flag
+    // =========================
+    let measuredViaAr = false;
+
+    if (
+        measured_via_ar !== undefined &&
+        measured_via_ar !== null &&
+        measured_via_ar !== ""
+    ) {
+
+        if (
+            measured_via_ar !== true &&
+            measured_via_ar !== false &&
+            measured_via_ar !== "true" &&
+            measured_via_ar !== "false"
+        ) {
+            throw new Error("Invalid AR measurement flag.");
+        }
+
+        measuredViaAr =
+            measured_via_ar === true ||
+            measured_via_ar === "true";
+    }
+
+    // =========================
+    // Return normalized data
+    // =========================
+    return {
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        latitude: latitudeNumber,
+        longitude: longitudeNumber,
+        estimated_area_sqm: area,
+        estimated_length_m: length,
+        estimated_width_m: width,
+        measured_via_ar: measuredViaAr
+    };
 };
-
 
 module.exports = {
     validateCreateComplaint

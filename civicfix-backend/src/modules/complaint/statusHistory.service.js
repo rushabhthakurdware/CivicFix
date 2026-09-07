@@ -1,12 +1,11 @@
 const statusHistoryRepository = require("./statusHistory.repository");
 const complaintRepository = require("./complaint.repository");
-
+const notificationService = require("../notifications/notification.service");
 
 // Allowed status transitions
 const allowedTransitions = {
     SUBMITTED: ["UNDER_REVIEW"],
-    UNDER_REVIEW: ["ASSIGNED"],
-    ASSIGNED: ["IN_PROGRESS"],
+    UNDER_REVIEW: ["IN_PROGRESS"],
     IN_PROGRESS: ["RESOLVED"],
     RESOLVED: ["CLOSED"],
     CLOSED: []
@@ -48,6 +47,15 @@ const changeComplaintStatus = async ({
         );
     }
 
+    // Completion comment is required when resolving a complaint
+    if (
+        newStatus === "RESOLVED" &&
+        (!comment || comment.trim().length < 5)
+    ) {
+    throw new Error(
+        "A completion comment is required when resolving a complaint."
+    );
+    }
 
     // Update complaint status
     const updatedComplaint =
@@ -67,10 +75,22 @@ const changeComplaintStatus = async ({
             comment
         });
 
+        let notification = null;
 
+    if (newStatus === "RESOLVED") {
+
+    notification =
+        await notificationService.createResolutionNotification({
+            citizenId: complaint.citizen_id,
+            complaintId: complaint.id,
+            complaintTitle: complaint.title,
+            comment
+        });
+}
     return {
         complaint: updatedComplaint,
-        history
+        history,
+        notification
     };
 };
 

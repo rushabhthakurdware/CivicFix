@@ -7,6 +7,9 @@ const {
 
 const { uploadImage } = require("../../utils/cloudinary");
 
+const {
+    calculateComplaintSeverity
+} = require("./complaint.scoring");
 
 const createComplaint = async (complaintData, citizenId, file) => {
 
@@ -17,8 +20,20 @@ const createComplaint = async (complaintData, citizenId, file) => {
         longitude: Number(complaintData.longitude)
     };
 
-    // Validate complaint data
+   
+// Validate complaint data
     validateCreateComplaint(dataToValidate);
+    
+const scoringResult = calculateComplaintSeverity({
+    category: complaintData.category,
+    estimatedAreaSqm: Number(
+        complaintData.estimated_area_sqm
+    ) || 0,
+    title: complaintData.title,
+    description: complaintData.description
+});
+
+    
 
     // Image is required
     if (!file) {
@@ -35,16 +50,35 @@ const createComplaint = async (complaintData, citizenId, file) => {
 
     // Prepare complaint data
     const data = {
-        complaintId,
-        citizenId,
-        title: complaintData.title.trim(),
-        description: complaintData.description.trim(),
-        category: complaintData.category,
-        severity: complaintData.severity,
-        latitude: dataToValidate.latitude,
-        longitude: dataToValidate.longitude,
-        address: complaintData.address || null
-    };
+    complaintId,
+    citizenId,
+    title: complaintData.title.trim(),
+    description: complaintData.description.trim(),
+    category: complaintData.category,
+    severity: scoringResult.severity,   // <-- ADD THIS
+    latitude: dataToValidate.latitude,
+    longitude: dataToValidate.longitude,
+    address: complaintData.address || null,
+
+    estimatedAreaSqm:
+        complaintData.estimated_area_sqm !== undefined
+            ? Number(complaintData.estimated_area_sqm)
+            : null,
+
+    estimatedLengthM:
+        complaintData.estimated_length_m !== undefined
+            ? Number(complaintData.estimated_length_m)
+            : null,
+
+    estimatedWidthM:
+        complaintData.estimated_width_m !== undefined
+            ? Number(complaintData.estimated_width_m)
+            : null,
+
+    measuredViaAr:
+        complaintData.measured_via_ar === "true" ||
+        complaintData.measured_via_ar === true
+};
 
     // Create complaint in PostgreSQL
     const complaint =
@@ -74,11 +108,11 @@ const getComplaintsByCitizen = async (citizenId) => {
 };
 
 
-const getComplaintById = async (complaintId, citizenId) => {
+const getComplaintByDatabaseId = async (id, citizenId) => {
 
     const complaint =
-        await complaintRepository.getComplaintById(
-            complaintId,
+        await complaintRepository.getComplaintByDatabaseId(
+            id,
             citizenId
         );
 
@@ -89,9 +123,31 @@ const getComplaintById = async (complaintId, citizenId) => {
     return complaint;
 };
 
+const getAllComplaintsForOfficer = async (filters) => {
 
+    return await complaintRepository.getAllComplaintsForOfficer(
+        filters
+    );
+
+};
+
+const getComplaintDetailsForOfficer = async (complaintId) => {
+
+    const result =
+        await complaintRepository.getComplaintDetailsForOfficer(
+            complaintId
+        );
+
+    if (!result) {
+        throw new Error("Complaint not found.");
+    }
+
+    return result;
+};
 module.exports = {
     createComplaint,
     getComplaintsByCitizen,
-    getComplaintById
+    getComplaintByDatabaseId,
+    getAllComplaintsForOfficer,
+    getComplaintDetailsForOfficer
 };

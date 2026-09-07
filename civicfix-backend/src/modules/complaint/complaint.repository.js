@@ -3,44 +3,58 @@ const { pool } = require("../../config/db");
 const createComplaint = async (complaintData) => {
 
     const {
-        complaintId,
-        citizenId,
-        title,
-        description,
-        category,
-        severity,
-        latitude,
-        longitude,
-        address
-    } = complaintData;
+    complaintId,
+    citizenId,
+    title,
+    description,
+    category,
+    severity,
+    latitude,
+    longitude,
+    address,
+    estimatedAreaSqm,
+    estimatedLengthM,
+    estimatedWidthM,
+    measuredViaAr
+} = complaintData;
 
     const query = `
-        INSERT INTO complaints (
-            complaint_id,
-            citizen_id,
-            title,
-            description,
-            category,
-            severity,
-            latitude,
-            longitude,
-            address
-        )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-        RETURNING *;
-    `;
-
-    const values = [
-        complaintId,
-        citizenId,
+    INSERT INTO complaints (
+        complaint_id,
+        citizen_id,
         title,
         description,
         category,
         severity,
         latitude,
         longitude,
-        address
-    ];
+        address,
+        estimated_area_sqm,
+        estimated_length_m,
+        estimated_width_m,
+        measured_via_ar
+    )
+    VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+    )
+    RETURNING *;
+`;
+
+const values = [
+    complaintId,
+    citizenId,
+    title,
+    description,
+    category,
+    severity,
+    latitude,
+    longitude,
+    address,
+    estimatedAreaSqm,
+    estimatedLengthM,
+    estimatedWidthM,
+    measuredViaAr
+];
 
     const result = await pool.query(query, values);
 
@@ -99,9 +113,96 @@ const updateComplaintStatus = async (complaintId, status) => {
 
     return result.rows[0];
 };
+
+const getAllComplaintsForOfficer = async (filters = {}) => {
+
+    const { severity, status } = filters;
+
+    let query = `
+        SELECT *
+        FROM complaints
+        WHERE 1 = 1
+    `;
+
+    const values = [];
+    let parameterIndex = 1;
+
+    if (severity) {
+        query += ` AND severity = $${parameterIndex}`;
+        values.push(severity);
+        parameterIndex++;
+    }
+
+    if (status) {
+        query += ` AND status = $${parameterIndex}`;
+        values.push(status);
+        parameterIndex++;
+    }
+
+    query += `
+        ORDER BY
+            CASE severity
+                WHEN 'HIGH' THEN 1
+                WHEN 'MEDIUM' THEN 2
+                WHEN 'LOW' THEN 3
+                ELSE 4
+            END,
+            created_at ASC;
+    `;
+
+    const result = await pool.query(query, values);
+
+    return result.rows;
+};
+
+const getComplaintDetailsForOfficer = async (complaintId) => {
+
+    const complaintQuery = `
+        SELECT
+            c.*,
+            ci.image_url,
+            ci.public_id
+        FROM complaints c
+        LEFT JOIN complaint_images ci
+            ON c.id = ci.complaint_id
+        WHERE c.id = $1;
+    `;
+
+    const complaintResult =
+        await pool.query(complaintQuery, [complaintId]);
+
+    if (complaintResult.rows.length === 0) {
+        return null;
+    }
+
+    const historyQuery = `
+        SELECT
+            id,
+            old_status,
+            new_status,
+            changed_by,
+            comment,
+            created_at
+        FROM complaint_status_history
+        WHERE complaint_id = $1
+        ORDER BY created_at ASC;
+    `;
+
+    const historyResult =
+        await pool.query(historyQuery, [complaintId]);
+
+    return {
+        complaint: complaintResult.rows[0],
+        history: historyResult.rows
+    };
+};
+
 module.exports = {
     createComplaint,
     getComplaintsByCitizen,
     getComplaintByDatabaseId    ,
-    updateComplaintStatus
+    updateComplaintStatus,
+    getAllComplaintsForOfficer,
+    getComplaintDetailsForOfficer
+
 };
