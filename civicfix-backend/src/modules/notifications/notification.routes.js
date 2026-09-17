@@ -10,4 +10,10 @@ router.get(
     notificationController.getMyNotifications
 );
 
+router.patch(
+    "/:notificationId/read",
+    authMiddleware,
+    notificationController.markNotificationAsRead
+);
+
 module.exports = router;

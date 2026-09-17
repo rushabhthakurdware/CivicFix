@@ -5,8 +5,6 @@ const STATUS_CONFIG = {
   UNDER_REVIEW: { label: 'Under Review', color: 'text-blue-400 bg-blue-950/40 border-blue-800/60' },
   IN_PROGRESS: { label: 'In Progress', color: 'text-yellow-400 bg-yellow-950/40 border-yellow-800/60' },
   RESOLVED: { label: 'Resolved', color: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/60' },
-  CLOSED: { label: 'Closed', color: 'text-neutral-500 bg-neutral-900/60 border-neutral-800' },
-  REJECTED: { label: 'Rejected', color: 'text-rose-400 bg-rose-950/40 border-rose-800/60' },
 };
 
 export default function StatusBadge({ status }) {

@@ -14,6 +14,16 @@ export const complaintApi = {
     apiClient.get(`/complaints/${complaintId}/status-history`),
 
   // Update status (e.g., UNDER_REVIEW -> IN_PROGRESS -> RESOLVED)
-  updateStatus: (complaintId, status, comment = '') =>
-    apiClient.patch(`/complaints/${complaintId}/status`, { status, comment }),
+  updateStatus: (complaintId, status, comment = '') => {
+    if (!status) {
+      return Promise.reject(new Error('A valid status transition must be provided.'));
+    }
+
+    return apiClient.patch(`/complaints/${complaintId}/status`, {
+      status,
+      new_status: status,
+      newStatus: status,
+      comment: comment?.trim() || '',
+    });
+  },
 };

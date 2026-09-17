@@ -10,11 +10,10 @@ import {
 } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 
-// Register required Chart.js controllers and elements
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
 export default function DashboardCharts({ stats, complaints = [] }) {
-  // 1. Severity Distribution (Doughnut)
+  // 1. Severity Distribution
   const doughnutData = {
     labels: ['High / Critical', 'Medium Priority', 'Low Priority'],
     datasets: [
@@ -51,19 +50,17 @@ export default function DashboardCharts({ stats, complaints = [] }) {
         borderColor: '#262626',
         borderWidth: 1,
         padding: 10,
-        boxPadding: 4,
       },
     },
     cutout: '75%',
   };
 
-  // 2. Status Pipeline Breakdown (Bar Chart)
+  // 2. Linear 4-Stage Status Pipeline
   const statusBuckets = {
     SUBMITTED: 0,
     UNDER_REVIEW: 0,
     IN_PROGRESS: 0,
     RESOLVED: 0,
-    CLOSED: 0,
   };
 
   complaints.forEach((item) => {
@@ -74,7 +71,7 @@ export default function DashboardCharts({ stats, complaints = [] }) {
   });
 
   const barData = {
-    labels: ['Submitted', 'Under Review', 'In Progress', 'Resolved', 'Closed'],
+    labels: ['Submitted', 'Under Review', 'In Progress', 'Resolved'],
     datasets: [
       {
         data: [
@@ -82,15 +79,8 @@ export default function DashboardCharts({ stats, complaints = [] }) {
           statusBuckets.UNDER_REVIEW,
           statusBuckets.IN_PROGRESS,
           statusBuckets.RESOLVED,
-          statusBuckets.CLOSED,
         ],
-        backgroundColor: [
-          '#525252',
-          '#3b82f6',
-          '#eab308',
-          '#10b981',
-          '#262626',
-        ],
+        backgroundColor: ['#525252', '#3b82f6', '#eab308', '#10b981'],
         borderRadius: 6,
         borderSkipped: false,
       },
@@ -128,7 +118,6 @@ export default function DashboardCharts({ stats, complaints = [] }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-      {/* Severity Doughnut */}
       <div className="bg-[#111] border border-neutral-800/90 rounded-2xl p-5 flex flex-col justify-between">
         <div>
           <h3 className="text-xs uppercase font-semibold text-neutral-400 tracking-wider">
@@ -136,7 +125,6 @@ export default function DashboardCharts({ stats, complaints = [] }) {
           </h3>
           <p className="text-[11px] text-neutral-500 mt-0.5">Distribution across severity levels</p>
         </div>
-
         <div className="h-56 relative flex items-center justify-center my-2">
           {stats.total === 0 ? (
             <p className="text-xs text-neutral-600">No telemetry records</p>
@@ -146,15 +134,13 @@ export default function DashboardCharts({ stats, complaints = [] }) {
         </div>
       </div>
 
-      {/* Status Pipeline Bar Chart */}
       <div className="lg:col-span-2 bg-[#111] border border-neutral-800/90 rounded-2xl p-5 flex flex-col justify-between">
         <div>
           <h3 className="text-xs uppercase font-semibold text-neutral-400 tracking-wider">
             Resolution Pipeline
           </h3>
-          <p className="text-[11px] text-neutral-500 mt-0.5">Complaints by workflow status</p>
+          <p className="text-[11px] text-neutral-500 mt-0.5">Complaints along the resolution path</p>
         </div>
-
         <div className="h-56 mt-3">
           <Bar data={barData} options={barOptions} />
         </div>

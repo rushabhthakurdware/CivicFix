@@ -11,3 +11,13 @@ export const getMyComplaints = async () => {
   const res = await client.get("/complaints/my");
   return res.data;
 };
+
+export const getComplaintById = async (complaintId) => {
+  const res = await client.get(`/complaints/${complaintId}`);
+  return res.data;
+};
+ 
+export const getComplaintStatusHistory = async (complaintId) => {
+  const res = await client.get(`/complaints/${complaintId}/status-history`);
+  return res.data;
+};

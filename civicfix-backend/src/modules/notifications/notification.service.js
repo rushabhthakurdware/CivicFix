@@ -17,6 +17,19 @@ const createResolutionNotification = async ({
     });
 };
 
+const markNotificationAsRead = async (notificationId, citizenId) => {
+    const notification =
+        await notificationRepository.markNotificationAsRead(
+            notificationId,
+            citizenId
+        );
+
+    if (!notification) {
+        throw new Error("Notification not found.");
+    }
+
+    return notification;
+};
 const getNotificationsByCitizen = async (citizenId) => {
 
     return await notificationRepository.getNotificationsByCitizen(
@@ -26,5 +39,6 @@ const getNotificationsByCitizen = async (citizenId) => {
 
 module.exports = {
     createResolutionNotification,
-    getNotificationsByCitizen
+    getNotificationsByCitizen,
+    markNotificationAsRead
 };

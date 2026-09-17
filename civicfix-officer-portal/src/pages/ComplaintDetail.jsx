@@ -17,14 +17,29 @@ import StatusBadge from '../components/StatusBadge';
 import StatusTimeline from '../components/StatusTimeline';
 import DetailMiniMap from '../components/DetailMiniMap';
 import toast from 'react-hot-toast';
-// Workflow linear states per backend specification
+
+// Strict 4-step forward pipeline (No REJECTED or CLOSED)
 const NEXT_STATUS_MAP = {
-  SUBMITTED: ['UNDER_REVIEW', 'REJECTED'],
-  UNDER_REVIEW: ['IN_PROGRESS', 'REJECTED'],
+  SUBMITTED: ['UNDER_REVIEW'],
+  UNDER_REVIEW: ['IN_PROGRESS'],
   IN_PROGRESS: ['RESOLVED'],
-  RESOLVED: ['CLOSED'],
-  CLOSED: [],
-  REJECTED: [],
+  RESOLVED: [], // Terminal final state
+};
+
+// Normalize casing, spaces, or hyphens (e.g. "Under Review" -> "UNDER_REVIEW")
+const normalizeStatusKey = (status) => {
+  if (!status) return 'SUBMITTED';
+  return String(status).trim().toUpperCase().replace(/\s+/g, '_').replace(/-/g, '_');
+};
+
+const formatStatusLabel = (status) => {
+  const map = {
+    SUBMITTED: 'Submitted',
+    UNDER_REVIEW: 'Under Review',
+    IN_PROGRESS: 'In Progress',
+    RESOLVED: 'Resolved',
+  };
+  return map[status] || status.replace(/_/g, ' ');
 };
 
 export default function ComplaintDetail() {
@@ -42,6 +57,10 @@ export default function ComplaintDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState('');
 
+  // 1. Unified property resolution
+  const currentStatus = normalizeStatusKey(complaint?.status);
+  const nextAllowed = NEXT_STATUS_MAP[currentStatus] || [];
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -53,10 +72,7 @@ export default function ComplaintDetail() {
         complaintApi.getStatusHistory(id),
       ]);
 
-      console.log('API detail response raw:', detailRes.data);
-      console.log('API status history raw:', historyRes.data);
-
-      // Deep unpack to support flat objects, { complaint: {...} }, { data: {...} }, etc.
+      // Deep unpack payload structure
       const raw = detailRes.data;
       const record =
         raw?.complaint ||
@@ -77,9 +93,10 @@ export default function ComplaintDetail() {
           [];
       setHistory(historyList);
 
-      const currentStatus = (record?.status || 'SUBMITTED').toUpperCase();
-      const availableNext = NEXT_STATUS_MAP[currentStatus] || [];
-      setSelectedStatus(availableNext[0] || '');
+      // Explicitly set default next step
+      const normStatus = normalizeStatusKey(record?.status);
+      const nextSteps = NEXT_STATUS_MAP[normStatus] || [];
+      setSelectedStatus(nextSteps[0] || '');
     } catch (err) {
       console.error('Failed to load complaint data:', err);
       setError('Unable to load complaint details. Please verify your connection.');
@@ -92,11 +109,26 @@ export default function ComplaintDetail() {
     loadData();
   }, [id]);
 
-const handleStatusUpdate = async (e) => {
+  // Keep selectedStatus in sync whenever complaint data changes
+  useEffect(() => {
+    if (nextAllowed.length > 0 && !selectedStatus) {
+      setSelectedStatus(nextAllowed[0]);
+    }
+  }, [currentStatus]);
+
+  const handleStatusUpdate = async (e) => {
     e.preventDefault();
     setActionError('');
 
-    if (selectedStatus === 'RESOLVED' && !comment.trim()) {
+    // Ensure status is never undefined
+    const statusToSend = selectedStatus || nextAllowed[0];
+
+    if (!statusToSend) {
+      setActionError('No valid next status found for this report.');
+      return;
+    }
+
+    if (statusToSend === 'RESOLVED' && !comment.trim()) {
       const msg = 'A completion comment is required when marking as RESOLVED.';
       setActionError(msg);
       toast.error(msg);
@@ -105,12 +137,13 @@ const handleStatusUpdate = async (e) => {
 
     try {
       setSubmitting(true);
-      await complaintApi.updateStatus(id, selectedStatus, comment);
+      await complaintApi.updateStatus(id, statusToSend, comment);
       setComment('');
-      toast.success(`Report status updated to ${selectedStatus.replace('_', ' ')}`);
+      toast.success(`Report status updated to ${formatStatusLabel(statusToSend)}`);
       await loadData();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update status.';
+      console.error('Status update failed:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to update status.';
       setActionError(msg);
       toast.error(msg);
     } finally {
@@ -141,11 +174,7 @@ const handleStatusUpdate = async (e) => {
     );
   }
 
-  // Unified property extraction matching all known backend naming patterns
   const complaintId = complaint._id || complaint.id || id;
-  const currentStatus = (complaint.status || 'SUBMITTED').toUpperCase();
-  const nextAllowed = NEXT_STATUS_MAP[currentStatus] || [];
-
   const photoUrl =
     complaint.photo_url ||
     complaint.photoUrl ||
@@ -167,7 +196,6 @@ const handleStatusUpdate = async (e) => {
   const length = complaint.estimated_length_m ?? complaint.estimatedLengthM;
   const width = complaint.estimated_width_m ?? complaint.estimatedWidthM;
 
-  // Support flat latitude/longitude, lat/lng, and GeoJSON [lng, lat]
   const latitude =
     complaint.latitude ??
     complaint.lat ??
@@ -187,7 +215,7 @@ const handleStatusUpdate = async (e) => {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link
             to="/dashboard"
-            className="text-xs font-medium text-neutral-400 hover:text-white flex items-center gap-1.5 transition"
+            className="text-xs font-medium text-neutral-400 hover:text-white flex items-center gap-1.5 transition cursor-pointer"
           >
             <ArrowLeft size={15} /> Back to dashboard
           </Link>
@@ -291,7 +319,7 @@ const handleStatusUpdate = async (e) => {
               )}
             </div>
 
-            {/* Geospatial Coordinates with Embedded Mini-Map */}
+            {/* Geospatial Coordinates with Mini-Map */}
             <div className="bg-[#111] border border-neutral-800/80 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-xs uppercase font-semibold text-neutral-400 tracking-wider flex items-center gap-2">
@@ -314,7 +342,6 @@ const handleStatusUpdate = async (e) => {
                 {complaint.address || 'Address not resolved'}
               </p>
 
-              {/* Embedded Dark Tile Map */}
               {hasValidCoords ? (
                 <DetailMiniMap
                   lat={latitude}
@@ -333,7 +360,7 @@ const handleStatusUpdate = async (e) => {
               </div>
             </div>
 
-            {/* Budget Panel (Blocked Indicator per Brief) */}
+            {/* Budget Panel (Blocked Indicator) */}
             <div className="bg-[#111] border border-dashed border-neutral-800 rounded-2xl p-5 opacity-75">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs uppercase font-semibold text-neutral-400 tracking-wider flex items-center gap-2">
@@ -359,7 +386,7 @@ const handleStatusUpdate = async (e) => {
 
               {nextAllowed.length === 0 ? (
                 <p className="text-xs text-neutral-500">
-                  This report has reached its terminal state ({currentStatus}). No further transitions allowed.
+                  This report has reached its terminal state ({formatStatusLabel(currentStatus)}). No further transitions allowed.
                 </p>
               ) : (
                 <form onSubmit={handleStatusUpdate} className="space-y-4">
@@ -372,13 +399,13 @@ const handleStatusUpdate = async (e) => {
                   <div>
                     <label className="block text-xs text-neutral-400 mb-1.5">Select Next Step</label>
                     <select
-                      value={selectedStatus}
+                      value={selectedStatus || nextAllowed[0] || ''}
                       onChange={(e) => setSelectedStatus(e.target.value)}
-                      className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 py-2 text-xs text-neutral-200 focus:outline-none focus:border-neutral-500"
+                      className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-3 py-2 text-xs text-neutral-200 focus:outline-none focus:border-neutral-500 cursor-pointer"
                     >
                       {nextAllowed.map((st) => (
                         <option key={st} value={st}>
-                          {st.replace('_', ' ')}
+                          Advance to: {formatStatusLabel(st)}
                         </option>
                       ))}
                     </select>
@@ -404,7 +431,7 @@ const handleStatusUpdate = async (e) => {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full bg-neutral-200 hover:bg-white text-black text-xs font-semibold py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition disabled:opacity-50 shadow-sm"
+                    className="w-full bg-neutral-200 hover:bg-white text-black text-xs font-semibold py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition disabled:opacity-50 shadow-sm cursor-pointer"
                   >
                     <Send size={13} />
                     {submitting ? 'Applying Transition...' : 'Update Status'}

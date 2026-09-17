@@ -9,6 +9,9 @@ import ARMeasureScreen from "../screens/ARMeasureScreen";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
+import NotificationsScreen from "../screens/Notificationsscreen";
+import MyComplaintsScreen from "../screens/Mycomplaintsscreen";
+import ComplaintDetailScreen from "../screens/Complaintdetailscreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -34,16 +37,27 @@ export default function AppNavigator() {
             {/* Home MUST be first (or rely on initialRouteName above) so a
                 fresh login always lands here, not on a dev/test screen. */}
             <Stack.Screen name="Home" component={HomeScreen} />
+
             <Stack.Screen name="CreateComplaint" component={CreateComplaintScreen} />
+
             <Stack.Screen
               name="ARMeasure"
               component={ARMeasureScreen}
               options={{ headerShown: false }}
             />
+
+            <Stack.Screen name="MyComplaints" component={MyComplaintsScreen} options={{ headerShown: true, title: "Track Your Reports" }} />
+            <Stack.Screen name="ComplaintDetail" component={ComplaintDetailScreen} options={{ headerShown: true, title: "Report Details" }} />
             <Stack.Screen
               name="ArTest"
               component={ArTestScreen}
               options={{ headerShown: true, title: "AR Test" }}
+            />
+
+            <Stack.Screen
+              name="Notifications"
+              component={NotificationsScreen}
+              options={{ headerShown: true, title: "Notifications" }}
             />
           </>
         ) : (

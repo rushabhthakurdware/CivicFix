@@ -5,7 +5,7 @@ import {
   MapPin,
   LogOut,
   AlertTriangle,
-  Flame,
+  Clock,
   CheckCircle2,
   Box,
   ChevronRight,
@@ -13,16 +13,16 @@ import {
   RefreshCw,
   Download,
   Printer,
+  Hourglass,
 } from 'lucide-react';
-
-import { exportToCSV, printWorkOrderReport } from '../utils/exportUtils';
 import { useAuth } from '../context/AuthContext';
 import { complaintApi } from '../api/complaintApi';
 import SeverityBadge from '../components/SeverityBadge';
 import StatusBadge from '../components/StatusBadge';
 import DashboardCharts from '../components/DashboardCharts';
-import DashboardMap from '../components/DashBoardMap';
+import DashboardMap from '../components/DashboardMap';
 import StatCard from '../components/StatCard';
+import { exportToCSV, printWorkOrderReport } from '../utils/exportUtils';
 
 export default function Dashboard() {
   const { logout, user } = useAuth();
@@ -30,7 +30,15 @@ export default function Dashboard() {
 
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, high: 0, medium: 0, low: 0 });
+  const [stats, setStats] = useState({
+    total: 0,
+    resolved: 0,
+    pending: 0,
+    submitted: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  });
 
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -47,51 +55,64 @@ export default function Dashboard() {
     return [];
   };
 
-  const fetchStats = async () => {
-    try {
-      const [allRes, highRes, medRes, lowRes] = await Promise.all([
-        complaintApi.getOfficerComplaints(),
-        complaintApi.getOfficerComplaints({ severity: 'HIGH' }),
-        complaintApi.getOfficerComplaints({ severity: 'MEDIUM' }),
-        complaintApi.getOfficerComplaints({ severity: 'LOW' }),
-      ]);
-
-      setStats({
-        total: parseList(allRes).length,
-        high: parseList(highRes).length,
-        medium: parseList(medRes).length,
-        low: parseList(lowRes).length,
-      });
-    } catch (err) {
-      console.error('Failed to load stat counts:', err);
-    }
-  };
-
-  const fetchComplaints = async () => {
+  const fetchStatsAndComplaints = async () => {
     setLoading(true);
     try {
+      // 1. Fetch total list to compute status metrics accurately
+      const allRes = await complaintApi.getOfficerComplaints();
+      const allList = parseList(allRes);
+
+      let resolvedCount = 0;
+      let inProgressCount = 0;
+      let underReviewCount = 0;
+      let submittedCount = 0;
+      let highCount = 0;
+      let medCount = 0;
+      let lowCount = 0;
+
+      allList.forEach((c) => {
+        const st = (c.status || '').toUpperCase();
+        const sev = (c.severity || '').toUpperCase();
+
+        if (st === 'RESOLVED') resolvedCount++;
+        else if (st === 'IN_PROGRESS') inProgressCount++;
+        else if (st === 'UNDER_REVIEW') underReviewCount++;
+        else submittedCount++;
+
+        if (sev === 'HIGH') highCount++;
+        else if (sev === 'MEDIUM') medCount++;
+        else if (sev === 'LOW') lowCount++;
+      });
+
+      setStats({
+        total: allList.length,
+        resolved: resolvedCount,
+        pending: inProgressCount + underReviewCount,
+        submitted: submittedCount,
+        high: highCount,
+        medium: medCount,
+        low: lowCount,
+      });
+
+      // 2. Fetch filtered items for list/map display
       const params = {};
       if (severityFilter !== 'ALL') params.severity = severityFilter;
       if (statusFilter !== 'ALL') params.status = statusFilter;
 
-      const res = await complaintApi.getOfficerComplaints(params);
-      setComplaints(parseList(res));
+      const filteredRes = await complaintApi.getOfficerComplaints(params);
+      setComplaints(parseList(filteredRes));
     } catch (err) {
-      console.error('Failed to fetch complaint queue:', err);
+      console.error('Failed to load dashboard data:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStats();
-  }, []);
-
-  useEffect(() => {
-    fetchComplaints();
+    fetchStatsAndComplaints();
   }, [severityFilter, statusFilter]);
 
-  // GSAP initial cards reveal
+  // GSAP animations
   useEffect(() => {
     if (statsContainerRef.current) {
       gsap.fromTo(
@@ -102,19 +123,12 @@ export default function Dashboard() {
     }
   }, []);
 
-  // GSAP staggered list reveal when complaints change
   useEffect(() => {
     if (!loading && listContainerRef.current?.children?.length > 0) {
       gsap.fromTo(
         listContainerRef.current.children,
         { opacity: 0, y: 12 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.35,
-          stagger: 0.05,
-          ease: 'power2.out',
-        }
+        { opacity: 1, y: 0, duration: 0.35, stagger: 0.05, ease: 'power2.out' }
       );
     }
   }, [complaints, loading]);
@@ -147,7 +161,6 @@ export default function Dashboard() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header with Export Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">
@@ -159,18 +172,15 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Export CSV */}
             <button
               onClick={() => exportToCSV(complaints)}
               disabled={complaints.length === 0}
               className="flex items-center gap-1.5 text-xs bg-neutral-900 border border-neutral-800 hover:border-neutral-700 disabled:opacity-50 text-neutral-300 px-3 py-2 rounded-xl transition cursor-pointer"
-              title="Download CSV spreadsheet"
             >
               <Download size={13} />
               <span>Export CSV</span>
             </button>
 
-            {/* Print / Save PDF Work Order */}
             <button
               onClick={() =>
                 printWorkOrderReport(complaints, {
@@ -180,18 +190,13 @@ export default function Dashboard() {
               }
               disabled={complaints.length === 0}
               className="flex items-center gap-1.5 text-xs bg-neutral-900 border border-neutral-800 hover:border-neutral-700 disabled:opacity-50 text-neutral-300 px-3 py-2 rounded-xl transition cursor-pointer"
-              title="Print contractor work order report"
             >
               <Printer size={13} />
               <span>Print Order (PDF)</span>
             </button>
 
-            {/* Refresh */}
             <button
-              onClick={() => {
-                fetchStats();
-                fetchComplaints();
-              }}
+              onClick={fetchStatsAndComplaints}
               className="flex items-center gap-1.5 text-xs bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-300 px-3 py-2 rounded-xl transition cursor-pointer"
             >
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
@@ -200,7 +205,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Animated Stat Cards Grid */}
+        {/* Clean Resolution Stat Cards Grid */}
         <div ref={statsContainerRef} className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
             label="Total Reports"
@@ -213,28 +218,8 @@ export default function Dashboard() {
             }}
           />
           <StatCard
-            label="Critical / High"
-            count={stats.high}
-            icon={Flame}
-            colorStyles={{
-              border: 'border-red-950/60',
-              headerText: 'text-red-400',
-              valueText: 'text-red-300',
-            }}
-          />
-          <StatCard
-            label="Medium Priority"
-            count={stats.medium}
-            icon={AlertTriangle}
-            colorStyles={{
-              border: 'border-amber-950/60',
-              headerText: 'text-amber-400',
-              valueText: 'text-amber-300',
-            }}
-          />
-          <StatCard
-            label="Low Priority"
-            count={stats.low}
+            label="Resolved"
+            count={stats.resolved}
             icon={CheckCircle2}
             colorStyles={{
               border: 'border-emerald-950/60',
@@ -242,15 +227,35 @@ export default function Dashboard() {
               valueText: 'text-emerald-300',
             }}
           />
+          <StatCard
+            label="In Progress / Active"
+            count={stats.pending}
+            icon={Hourglass}
+            colorStyles={{
+              border: 'border-amber-950/60',
+              headerText: 'text-amber-400',
+              valueText: 'text-amber-300',
+            }}
+          />
+          <StatCard
+            label="Awaiting Review"
+            count={stats.submitted}
+            icon={Clock}
+            colorStyles={{
+              border: 'border-blue-950/60',
+              headerText: 'text-blue-400',
+              valueText: 'text-blue-300',
+            }}
+          />
         </div>
 
-        {/* Chart.js Analytical Overview */}
+        {/* Analytical Overview */}
         <DashboardCharts stats={stats} complaints={complaints} />
 
         {/* Geospatial Map */}
         <DashboardMap complaints={complaints} />
 
-        {/* Filters */}
+        {/* Filter Controls (Strict 4-state workflow) */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-[#111] border border-neutral-800/80 p-3 rounded-2xl mb-6">
           <div className="flex items-center gap-2">
             <Filter size={15} className="text-neutral-500 ml-1" />
@@ -285,13 +290,11 @@ export default function Dashboard() {
               <option value="UNDER_REVIEW">Under Review</option>
               <option value="IN_PROGRESS">In Progress</option>
               <option value="RESOLVED">Resolved</option>
-              <option value="CLOSED">Closed</option>
-              <option value="REJECTED">Rejected</option>
             </select>
           </div>
         </div>
 
-        {/* Complaint List with GSAP Stagger */}
+        {/* Complaint Queue List */}
         {loading ? (
           <div className="py-20 text-center text-neutral-500 text-sm">
             <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-neutral-600" />

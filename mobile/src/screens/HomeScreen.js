@@ -18,7 +18,7 @@ export default function HomeScreen({ navigation }) {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Header / Brand Badge */}
+        {/* Top Header / Brand Badge & Action Controls */}
         <View style={styles.topBar}>
           <View style={styles.brandRow}>
             <View style={styles.logoBadge}>
@@ -27,16 +27,27 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.brandTitle}>CIVICFIX</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.logoutIconButton}
-            onPress={logout}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.logoutIconText}>🚪</Text>
-          </TouchableOpacity>
+          <View style={styles.topActions}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate("Notifications")}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.buttonIconText}>🔔</Text>
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={logout}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.buttonIconText}>🚪</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* User Card */}
+        {/* User Profile Card */}
         <View style={styles.userCard}>
           <View style={styles.userAvatar}>
             <Text style={styles.userAvatarText}>
@@ -54,11 +65,12 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Action Grid / List */}
+        {/* Quick Actions Header */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
         </View>
 
+        {/* Create Complaint Action */}
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate("CreateComplaint")}
@@ -76,6 +88,43 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.chevron}>→</Text>
         </TouchableOpacity>
 
+        {/* Notifications Action Card */}
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate("Notifications")}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.actionIconContainer, styles.notificationIconBg]}>
+            <Text style={styles.actionIcon}>🔔</Text>
+          </View>
+          <View style={styles.actionContent}>
+            <Text style={styles.actionTitle}>Notifications</Text>
+            <Text style={styles.actionSubtitle}>
+              Check updates and progress on your filed reports
+            </Text>
+          </View>
+          <Text style={styles.chevron}>→</Text>
+        </TouchableOpacity>
+
+
+        <TouchableOpacity
+  style={styles.actionCard}
+  onPress={() => navigation.navigate("MyComplaints")}
+  activeOpacity={0.8}
+>
+  <View style={[styles.actionIconContainer, styles.reportsIconBg]}>
+    <Text style={styles.actionIcon}>📋</Text>
+  </View>
+  <View style={styles.actionContent}>
+    <Text style={styles.actionTitle}>Track Your Reports</Text>
+    <Text style={styles.actionSubtitle}>
+      View status history, progress, and updates on your complaints
+    </Text>
+  </View>
+  <Text style={styles.chevron}>→</Text>
+</TouchableOpacity>
+
+        {/* AR Test Action Card */}
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate("ArTest")}
@@ -93,7 +142,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.chevron}>→</Text>
         </TouchableOpacity>
 
-        {/* Secondary Logout Button */}
+        {/* Bottom Logout Button */}
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={logout}
@@ -152,7 +201,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 2,
   },
-  logoutIconButton: {
+  topActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  iconButton: {
     width: 38,
     height: 38,
     borderRadius: 10,
@@ -161,9 +215,19 @@ const styles = StyleSheet.create({
     borderColor: "#2c2c2e",
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
   },
-  logoutIconText: {
+  buttonIconText: {
     fontSize: 16,
+  },
+  notificationDot: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#ef4444",
   },
   userCard: {
     flexDirection: "row",
@@ -253,6 +317,9 @@ const styles = StyleSheet.create({
   complaintIconBg: {
     backgroundColor: "rgba(239, 68, 68, 0.12)",
   },
+  notificationIconBg: {
+    backgroundColor: "rgba(234, 179, 8, 0.12)",
+  },
   arIconBg: {
     backgroundColor: "rgba(59, 130, 246, 0.12)",
   },
@@ -279,7 +346,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   logoutButton: {
-    marginTop: "auto",
+    marginTop: 20,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
@@ -301,4 +368,7 @@ const styles = StyleSheet.create({
     color: "#52525b",
     fontSize: 11,
   },
+  reportsIconBg: {
+  backgroundColor: "rgba(168, 85, 247, 0.12)", // subtle purple accent
+},
 });

@@ -29,6 +29,22 @@ const createNotification = async ({
 
     return result.rows[0];
 };
+const markNotificationAsRead = async (notificationId, citizenId) => {
+    const query = `
+        UPDATE notifications
+        SET is_read = TRUE
+        WHERE id = $1
+          AND citizen_id = $2
+        RETURNING *;
+    `;
+
+    const result = await pool.query(query, [
+        notificationId,
+        citizenId
+    ]);
+
+    return result.rows[0];
+};
 
 const getNotificationsByCitizen = async (citizenId) => {
 
@@ -52,5 +68,6 @@ const getNotificationsByCitizen = async (citizenId) => {
 
 module.exports = {
     createNotification,
-    getNotificationsByCitizen
+    getNotificationsByCitizen,
+    markNotificationAsRead
 };
