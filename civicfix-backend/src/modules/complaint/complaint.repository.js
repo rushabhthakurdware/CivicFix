@@ -15,7 +15,8 @@ const createComplaint = async (complaintData) => {
     estimatedAreaSqm,
     estimatedLengthM,
     estimatedWidthM,
-    measuredViaAr
+    measuredViaAr,
+    estimatedBudgetInr
 } = complaintData;
 
     const query = `
@@ -32,10 +33,11 @@ const createComplaint = async (complaintData) => {
         estimated_area_sqm,
         estimated_length_m,
         estimated_width_m,
-        measured_via_ar
+        measured_via_ar,
+        estimated_budget_inr
     )
     VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
     )
     RETURNING *;
 `;
@@ -53,7 +55,8 @@ const values = [
     estimatedAreaSqm,
     estimatedLengthM,
     estimatedWidthM,
-    measuredViaAr
+    measuredViaAr,
+    estimatedBudgetInr
 ];
 
     const result = await pool.query(query, values);

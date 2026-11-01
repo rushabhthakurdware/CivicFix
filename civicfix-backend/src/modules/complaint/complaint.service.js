@@ -11,6 +11,10 @@ const {
     calculateComplaintSeverity
 } = require("./complaint.scoring");
 
+const {
+    calculateEstimatedBudget
+} = require("./complaint.budget");
+
 const createComplaint = async (complaintData, citizenId, file) => {
 
     // Convert form-data values into proper numbers
@@ -20,9 +24,15 @@ const createComplaint = async (complaintData, citizenId, file) => {
         longitude: Number(complaintData.longitude)
     };
 
+    
    
 // Validate complaint data
     validateCreateComplaint(dataToValidate);
+
+    const budgetResult = calculateEstimatedBudget({
+    category: complaintData.category,
+    estimatedAreaSqm: complaintData.estimated_area_sqm
+});
     
 const scoringResult = calculateComplaintSeverity({
     category: complaintData.category,
@@ -59,6 +69,8 @@ const scoringResult = calculateComplaintSeverity({
     latitude: dataToValidate.latitude,
     longitude: dataToValidate.longitude,
     address: complaintData.address || null,
+    estimatedBudgetInr: budgetResult.estimatedBudgetInr,
+
 
     estimatedAreaSqm:
         complaintData.estimated_area_sqm !== undefined
@@ -144,6 +156,9 @@ const getComplaintDetailsForOfficer = async (complaintId) => {
 
     return result;
 };
+
+
+
 module.exports = {
     createComplaint,
     getComplaintsByCitizen,
